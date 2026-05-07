@@ -1,4 +1,4 @@
-const api = "http://127.0.0.1:5000/products";
+const api = "https://bakery-api-ag1a.onrender.com/products";
 
 let products = [];
 let allProducts = [];

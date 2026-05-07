@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Products</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card full">
+
+    <h2>⚙️ Manage Products</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="table"></tbody>
+    </table>
+
+    <button class="backBtn" onclick="goHome()">⬅ Back</button>
+
+</div>
+
+<script>
+const api = "http://127.0.0.1:5000/products";
+
+function load() {
+    fetch(api)
+    .then(res => res.json())
+    .then(data => {
+        let table = document.getElementById("table");
+        table.innerHTML = "";
+
+        data.forEach(p => {
+            table.innerHTML += `
+                <tr>
+                    <td><input id="n-${p.id}" value="${p.name}"></td>
+                    <td><input id="p-${p.id}" value="${p.price}"></td>
+                    <td>
+                        <button onclick="update(${p.id})">Update</button>
+                        <button onclick="del(${p.id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+    });
+}
+
+function update(id) {
+    let name = document.getElementById(`n-${id}`).value;
+    let price = document.getElementById(`p-${id}`).value;
+
+    fetch(`${api}/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({name, price})
+    }).then(() => {
+        alert("Updated!");
+        load();
+    });
+}
+
+function del(id) {
+    if (confirm("Delete this product?")) {
+        fetch(`${api}/${id}`, {
+            method: "DELETE"
+        }).then(() => load());
+    }
+}
+
+function goHome() {
+    window.location.href = "index.html";
+}
+
+load();
+</script>
+
+</body>
+</html>

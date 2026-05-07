@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Product</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card full">
+
+    <h2>➕ Add Product</h2>
+
+    <input type="text" id="pname" placeholder="Enter Product Name">
+    <input type="number" id="pprice" placeholder="Enter Price">
+
+    <button onclick="addProduct()">Add Product</button>
+
+    <button class="backBtn" onclick="goHome()">⬅ Back</button>
+
+</div>
+
+<script>
+const api = "http://127.0.0.1:5000/products";
+
+function addProduct() {
+    let name = document.getElementById("pname").value;
+    let price = document.getElementById("pprice").value;
+
+    fetch(api, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({name, price})
+    }).then(() => {
+        alert("Product Added");
+        document.getElementById("pname").value = "";
+        document.getElementById("pprice").value = "";
+    });
+}
+
+function goHome() {
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

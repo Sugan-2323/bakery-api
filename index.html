@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Billing - OM Muruga Bakery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1 class="logo">🍞 OM MURUGA BAKERY</h1>
+<div class="nav">
+    <button onclick="goAdd()">➕ Add Product</button>
+    <button onclick="goManage()">⚙️ Manage Products</button>
+    <button onclick="goDashboard()">📊 Dashboard</button>
+    <!-- <button onclick="goHistory()">📊 Bill History</button> -->
+</div>
+
+<div class="card full">
+
+    <h2>B I L L </h2>
+
+    <input type="text" id="searchProduct" placeholder="🔍 Search Product..." onkeyup="filterProducts()">
+
+    <select id="productSelect"></select>
+    <input type="number" id="qty" placeholder="Quantity">
+
+    <button onclick="addToCart()">Add to Bill</button>
+    <button onclick="clearBill()">🧹 Clear</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty × Price</th>
+                <th>Total</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="billTable"></tbody>
+    </table>
+    <h3 id="subTotal">Subtotal = ₹0</h3>
+
+    <h3 id="gstAmount">GST = ₹0</h3>
+
+    <h3 id="grandTotal">Total = ₹0</h3>
+
+    <button onclick="printBill()">🖨️ Print Bill</button>
+
+</div>
+
+<!-- 🧾 PRINT AREA -->
+<div id="printArea">
+
+    <h2 style="text-align:center;">🍞 OM MURUGA BAKERY</h2>
+    <p id="billInfo"></p>
+
+    <table class="print-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody id="printContent"></tbody>
+    </table>
+
+    <!-- ✅ GST DISPLAY -->
+    <p id="printSubTotal"></p>
+    <p id="printGST"></p>
+
+    <hr>
+
+    <h3 id="printTotal"></h3>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>

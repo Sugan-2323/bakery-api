@@ -1,168 +1,99 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
+import os
+
 app = Flask(__name__)
 CORS(app)
 
-# ---------------- DATABASE ----------------
-# conn = pyodbc.connect(
-#     "DRIVER={SQL Server};SERVER=LAPTOP-FL8R7OGR\\SQLEXPRESS;DATABASE=BakeryDB;Trusted_Connection=yes;"
-# )
-# cursor = conn.cursor()
-
-conn = psycopg2.connect(
-    host="db.qnydxtdgwnwrdwxqlqxp.supabase.co",
-    database="postgres",
-    user="postgres",
-    password="suganbvss@@2003",
-    port="5432"
-)
-
+# DATABASE CONNECTION
+conn = psycopg2.connect(os.environ.get("DATABASE_URL"), sslmode='require')
 cursor = conn.cursor()
 
-# ---------------- GET PRODUCTS ----------------
+# GET PRODUCTS
 @app.route('/products', methods=['GET'])
 def get_products():
     cursor.execute("SELECT * FROM Products")
     rows = cursor.fetchall()
-
-    products = []
-    for row in rows:
-        products.append({
-            "id": row[0],
-            "name": row[1],
-            "price": float(row[2])
-        })
-
+    products = [{"id": r[0], "name": r[1], "price": float(r[2])} for r in rows]
     return jsonify(products)
 
-# ---------------- ADD PRODUCT ----------------
+# ADD PRODUCT
 @app.route('/products', methods=['POST'])
 def add_product():
     data = request.json
-
-    cursor.execute(
-    "INSERT INTO Products (Name, Price) VALUES (%s, %s)",
-    (name, price)
-    )
+    cursor.execute("INSERT INTO Products (Name, Price) VALUES (%s, %s)", (data['name'], data['price']))
     conn.commit()
-
     return jsonify({"message": "Product added"})
 
-# ---------------- UPDATE PRODUCT ----------------
+# UPDATE PRODUCT
 @app.route('/products/<int:id>', methods=['PUT'])
 def update_product(id):
     data = request.json
-
-    cursor.execute(
-    "UPDATE Products SET Name=%s, Price=%s WHERE Id=%s",
-    (name, price, id)
-    )
+    cursor.execute("UPDATE Products SET Name=%s, Price=%s WHERE Id=%s", (data['name'], data['price'], id))
     conn.commit()
-
     return jsonify({"message": "Updated"})
 
-# ---------------- DELETE PRODUCT ----------------
+# DELETE PRODUCT
 @app.route('/products/<int:id>', methods=['DELETE'])
 def delete_product(id):
-    cursor.execute(
-    "DELETE FROM Products WHERE Id=%s",
-    (id,)
-    )
+    cursor.execute("DELETE FROM Products WHERE Id=%s", (id,))
     conn.commit()
-
     return jsonify({"message": "Deleted"})
 
-# ---------------- SAVE BILL (WITH GST) ----------------
+# SAVE BILL
 @app.route('/save-bill', methods=['POST'])
 def save_bill():
     data = request.json
     items = data.get('items')
-
-    subtotal = 0
-
-    # CALCULATE SUBTOTAL
-    for item in items:
-        subtotal += item['qty'] * item['price']
-
-    # GST CALCULATION
-    gst_percent = 5
-    gst_amount = (subtotal * gst_percent) / 100
+    subtotal = sum(i['qty'] * i['price'] for i in items)
+    gst_amount = (subtotal * 5) / 100
     final_total = subtotal + gst_amount
 
     try:
-        # INSERT BILL
-        cursor.execute(
-            "INSERT INTO Bills (TotalAmount) OUTPUT INSERTED.BillId VALUES (?)",
-            final_total
-        )
+        cursor.execute("INSERT INTO Bills (TotalAmount) VALUES (%s) RETURNING BillId", (final_total,))
         bill_id = cursor.fetchone()[0]
-
-        # INSERT ITEMS
         for item in items:
             cursor.execute(
-                "INSERT INTO BillItems (BillId, ProductId, Quantity, Price) VALUES (?, ?, ?, ?)",
-                bill_id,
-                item['productId'],
-                item['qty'],
-                item['price']
+                "INSERT INTO BillItems (BillId, ProductId, Quantity, Price) VALUES (%s, %s, %s, %s)",
+                (bill_id, item['productId'], item['qty'], item['price'])
             )
-
         conn.commit()
-
-        return jsonify({
-            "message": "Bill Saved",
-            "billId": bill_id,
-            "subtotal": subtotal,
-            "gst": gst_amount,
-            "total": final_total
-        })
-
+        return jsonify({"message": "Bill Saved", "billId": bill_id, "total": final_total})
     except Exception as e:
+        conn.rollback()
         print("ERROR:", e)
         return jsonify({"message": "Error saving bill"}), 500
 
-# ---------------- DASHBOARD: TOTAL SALES ----------------
+# DASHBOARD - TOTAL SALES
 @app.route('/dashboard/total-sales', methods=['GET'])
 def total_sales():
-    cursor.execute("SELECT ISNULL(SUM(TotalAmount), 0) FROM Bills")
+    cursor.execute("SELECT COALESCE(SUM(TotalAmount), 0) FROM Bills")
     result = cursor.fetchone()[0]
-
     return jsonify({"totalSales": float(result)})
 
-# ---------------- DASHBOARD: TODAY SALES ----------------
+# DASHBOARD - TODAY SALES
 @app.route('/dashboard/today-sales', methods=['GET'])
 def today_sales():
-    cursor.execute("""
-        SELECT ISNULL(SUM(TotalAmount), 0)
-        FROM Bills
-        WHERE CONVERT(DATE, BillDate) = CONVERT(DATE, GETDATE())
-    """)
+    cursor.execute("SELECT COALESCE(SUM(TotalAmount), 0) FROM Bills WHERE DATE(BillDate) = CURRENT_DATE")
     result = cursor.fetchone()[0]
-
     return jsonify({"todaySales": float(result)})
 
-# ---------------- DASHBOARD: TOP PRODUCT ----------------
+# DASHBOARD - TOP PRODUCT
 @app.route('/dashboard/top-product', methods=['GET'])
 def top_product():
     cursor.execute("""
-        SELECT TOP 1 P.Name, SUM(BI.Quantity) AS TotalQty
+        SELECT P.Name, SUM(BI.Quantity) AS TotalQty
         FROM BillItems BI
         JOIN Products P ON BI.ProductId = P.Id
         GROUP BY P.Name
         ORDER BY TotalQty DESC
+        LIMIT 1
     """)
-
     row = cursor.fetchone()
-
     if row:
-        return jsonify({
-            "product": row[0],
-            "quantity": row[1]
-        })
-
+        return jsonify({"product": row[0], "quantity": row[1]})
     return jsonify({"product": "-", "quantity": 0})
 
-# ---------------- RUN APP ----------------
 if __name__ == '__main__':
     app.run(debug=True)

@@ -7,8 +7,9 @@ app = Flask(__name__)
 CORS(app)
 
 # DATABASE CONNECTION
-conn = psycopg2.connect(os.environ.get("postgresql://postgres:suganbvss%40%402003@db.gypxuaxzlxmpecvitxja.supabase.co:5432/postgres"), 
-                        sslmode='require'
+conn = psycopg2.connect(
+    os.environ.get("DATABASE_URL", "postgresql://postgres.gypxuaxzlxmpecvitxja:suganbvss%40%402003@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"),
+    sslmode='require'
 )
 cursor = conn.cursor()
 
